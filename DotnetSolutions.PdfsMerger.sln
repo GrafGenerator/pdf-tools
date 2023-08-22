@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetSolutions.PdfsMerger", "src\DotnetSolutions.PdfsMerger\DotnetSolutions.PdfsMerger.csproj", "{A3420A92-72C4-44D5-9759-6856277C3863}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetSolutions.PdfTools", "src\DotnetSolutions.PdfTools\DotnetSolutions.PdfTools.csproj", "{A3420A92-72C4-44D5-9759-6856277C3863}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

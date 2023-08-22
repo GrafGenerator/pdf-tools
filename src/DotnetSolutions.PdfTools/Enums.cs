@@ -1,4 +1,4 @@
-namespace DotnetSolutions.PdfsMerger;
+namespace DotnetSolutions.PdfTools;
 
 public enum SortDirection
 {

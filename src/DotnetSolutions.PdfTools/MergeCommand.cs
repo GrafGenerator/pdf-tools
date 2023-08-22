@@ -1,31 +1,32 @@
-﻿using CommandLine;
+using CommandLine;
 using PdfSharp.Pdf;
 using PdfSharp.Pdf.IO;
 
-namespace DotnetSolutions.PdfsMerger;
+namespace DotnetSolutions.PdfTools;
 
-public class Program
+public class MergeCommand
 {
-    static void Main(string[] args)
+    private readonly MergeOptions _options;
+
+    public MergeCommand(MergeOptions options)
     {
-        Parser.Default.ParseArguments<CommandLineArguments>(args)
-            .WithParsed(DoProcess);
+        _options = options;
     }
 
-    private static void DoProcess(CommandLineArguments options)
+    public void Run()
     {
-        var doConsoleOutput = !options.Silent;
-        var sourceDirectory = new DirectoryInfo(options.SourceDirectoryPath);
+        var doConsoleOutput = !_options.Silent;
+        var sourceDirectory = new DirectoryInfo(_options.SourceDirectoryPath);
 
         if (doConsoleOutput)
         {
             Console.WriteLine(
-                $"Searching PDF files in directory ({(options.UseRecursiveSearch ? "recursive search" : "this directory only")}):");
+                $"Searching PDF files in directory ({(_options.UseRecursiveSearch ? "recursive search" : "this directory only")}):");
             Console.WriteLine(sourceDirectory.FullName);
             Console.WriteLine();
         }
         
-        var sortInfo = ParseSorting(options.Sort);
+        var sortInfo = ParseSorting(_options.Sort);
 
         if (doConsoleOutput)
         {
@@ -54,7 +55,7 @@ public class Program
         };
 
         var files = sourceDirectory.GetFiles("*.pdf",
-            options.UseRecursiveSearch ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly);
+            _options.UseRecursiveSearch ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly);
         var sortedFiles = sortFn(files).ToArray();
 
         if (doConsoleOutput)
@@ -68,7 +69,7 @@ public class Program
         Console.WriteLine("Processing files.");
         foreach (var fileInfo in sortedFiles)
         {
-            Console.WriteLine($"Processing {fileInfo.Name} ({Path.GetRelativePath(options.SourceDirectoryPath, fileInfo.FullName)})");
+            Console.WriteLine($"Processing {fileInfo.Name} ({Path.GetRelativePath(_options.SourceDirectoryPath, fileInfo.FullName)})");
             
             using var fileStream = fileInfo.OpenRead();
             var fileDocument = PdfReader.Open(fileStream, PdfDocumentOpenMode.Import);
@@ -86,9 +87,9 @@ public class Program
         outputDocument.Options.NoCompression = true;
         outputDocument.Options.CompressContentStreams = false;
 
-        var outputFilePath = string.IsNullOrEmpty(options.OutputFilePath)
-            ? Path.Combine(options.SourceDirectoryPath, "output.pdf")
-            : options.OutputFilePath;
+        var outputFilePath = string.IsNullOrEmpty(_options.OutputFilePath)
+            ? Path.Combine(_options.SourceDirectoryPath, "output.pdf")
+            : _options.OutputFilePath;
 
         var outputFileInfo = new FileInfo(outputFilePath);
         Console.WriteLine($"Save result document to: {outputFileInfo.FullName}");
@@ -99,7 +100,7 @@ public class Program
         Console.WriteLine();
         Console.WriteLine("Done.");
     }
-
+    
     private static Func<IEnumerable<FileInfo>, IEnumerable<FileInfo>> GetSortFn<TKey>(
         SortInfo sortInfo, Func<FileInfo, TKey>? keyFn) => keyFn == null
         ? inputs => inputs
@@ -107,9 +108,18 @@ public class Program
             ? inputs => inputs.OrderBy(keyFn)
             : inputs => inputs.OrderByDescending(keyFn);
 
-    private static SortInfo ParseSorting(string input)
+    private static SortInfo ParseSorting(string? input)
     {
         var result = new SortInfo();
+
+        if (string.IsNullOrEmpty(input))
+        {
+            result.SortDirection = SortDirection.Asc;
+            result.SortType = SortType.FileName;
+
+            return result;
+        }
+        
         var parts = input.Split(" ", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
         if (parts.Length == 0)
@@ -127,4 +137,23 @@ public class Program
 
         return result;
     }
+}
+
+[Verb("merge", HelpText = "Scan directory for PDF files and merge them together.")]
+public class MergeOptions
+{
+    [Option('i', "input", Required = true, HelpText = "Path to the directory with source PDF files.")]
+    public string SourceDirectoryPath { get; set; }
+            
+    [Option('r', "recursive", Required = false, Default = true, HelpText = "Defines whether recursive directory search is required. True by default.")]
+    public bool UseRecursiveSearch { get; set; }
+            
+    [Option('s', "sort", Required = false, Default = null, HelpText = "Defines sorting for files in form \"type[ direction]\". Type=DateCreated|DateModified|Name|Path. Name sorts by file name, Path sorts by file path. Direction=Asc|Desc, optional, Asc is default.")]
+    public string Sort { get; set; }
+
+    [Option('o', "output", Required = false, HelpText = "Merged PDF file path.")]
+    public string OutputFilePath { get; set; } = null!;
+    
+    [Option( "silent", Required = false, Default = false, HelpText = "No output to the console.")]
+    public bool Silent { get; set; }
 }
